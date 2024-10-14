@@ -193,7 +193,11 @@ class PolygonDrawer(ctk.CTk):
                 self.canvas.create_line(polygon[i], polygon[(i+1) % len(polygon)], fill=self.color2edge, width=1)
                 # Repintar a cor do polígono
         self.polygons = self.polygons_aux.copy()
-        
+        for i in range(len(self.polygons)):
+            if self.colorsList[i] != '':
+                self.selected_polygon = i
+                self.color2paint = self.colorsList[i]
+                self.fillpoly()
         
     def changeEdge_color(self):
         """ Muda a cor da aresta do polígono selecionado."""
