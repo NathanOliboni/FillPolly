@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox, colorchooser
 from shapely.geometry import Polygon, Point
+import math
 
 class PolygonDrawer(ctk.CTk):
     def __init__(self):
@@ -43,14 +44,14 @@ class PolygonDrawer(ctk.CTk):
         
         self.paint_button = ctk.CTkButton(self.main_frame, text="Preencher Polígono", command=self.fillpoly)
         self.paint_button.grid(row=2, column=1, padx=10, pady=10)
-        
+           
         # Botão para selecionar a cor
         self.color_button = ctk.CTkButton(self.main_frame, text="Selecionar Cor", command=self.choose_color)
         self.color_button.grid(row=2, column=0, padx=10, pady=10)
         
-        # Botão para selecionar a cor da aresta
-        self.color_button = ctk.CTkButton(self.main_frame, text="Selecionar Cor da Aresta", command=self.choose_edge_color)
-        self.color_button.grid(row=3, column=0, padx=10, pady=10)
+        # CheckBox para pintar a aresta
+        self.edge_color_check = ctk.CTkCheckBox(self.main_frame, text="Pintar Aresta", command=self.choose_edge_color)
+        self.edge_color_check.grid(row=4, column=0, padx=10, pady=10) 
 
         # Variáveis para armazenamento
         self.polygons = []  # Lista de polígonos (armazena coordenadas)
@@ -62,7 +63,7 @@ class PolygonDrawer(ctk.CTk):
         self.colorsList = [] # Lista para armazenar as cores para redesenhar caso algum seja excluido
         
         # Adiciona um círculo para exibir a cor selecionada
-        self.color_display = self.canvas.create_oval(620, 20, 650, 50, fill=self.current_color, outline="yellow", width=2)
+        self.color_display = self.canvas.create_oval(620, 20, 650, 50, fill=self.current_color, outline="yellow", width=1)
         
         # Eventos do mouse
         self.canvas.bind("<Button-1>", self.add_point)
@@ -79,9 +80,14 @@ class PolygonDrawer(ctk.CTk):
             
     def choose_edge_color(self):
         """ Abre um seletor de cor e atualiza a cor atual e a exibição da cor."""
-        color_code = colorchooser.askcolor(title="Escolher Cor")[1]
-        if color_code:
-            self.color2edge = color_code
+        # Verificar se o checkBox está marcado, se sim, muda a cor da aresta, se não define como amarelo
+        if self.edge_color_check.get() == 1:
+            color_code = colorchooser.askcolor(title="Escolher Cor")[1]
+            if color_code:
+                self.color2edge = color_code
+                self.canvas.itemconfig(self.color_display, fill=self.current_color)
+        else:
+            self.color2edge = "yellow"
             self.canvas.itemconfig(self.color_display, fill=self.current_color)
             
     def add_point(self, event):
@@ -93,13 +99,13 @@ class PolygonDrawer(ctk.CTk):
         # Desenha linhas entre pontos
         if len(self.current_polygon) > 1:
             # A linha deve ser mais grossa para melhor visualização
-            self.add_point_line = self.canvas.create_line(self.current_polygon[-2], self.current_polygon[-1], fill=self.color2edge, width=4)
+            self.add_point_line = self.canvas.create_line(self.current_polygon[-2], self.current_polygon[-1], fill=self.color2edge, width=1)
     
     def finish_polygon(self, event=None):
         """ Conclui o desenho de um polígono e o armazena."""
         if len(self.current_polygon) > 2:
             # Fechar o polígono desenhando uma linha do último ponto para o primeiro
-            self.add_point_line = self.canvas.create_line(self.current_polygon[-1], self.current_polygon[0], fill=self.color2edge, width=4)
+            self.add_point_line = self.canvas.create_line(self.current_polygon[-1], self.current_polygon[0], fill=self.color2edge, width=1)
             
             # Adiciona o polígono à lista
             self.polygons.append(self.current_polygon)
@@ -184,7 +190,7 @@ class PolygonDrawer(ctk.CTk):
         for polygon in self.polygons_aux:
             for i in range(len(polygon)):
                 self.canvas.create_oval(polygon[i][0]-3, polygon[i][1]-3, polygon[i][0]+3, polygon[i][1]+3, fill="black")
-                self.canvas.create_line(polygon[i], polygon[(i+1) % len(polygon)], fill=self.color2edge, width=4)
+                self.canvas.create_line(polygon[i], polygon[(i+1) % len(polygon)], fill=self.color2edge, width=1)
                 # Repintar a cor do polígono
         self.polygons = self.polygons_aux.copy()
         
@@ -192,31 +198,70 @@ class PolygonDrawer(ctk.CTk):
     def changeEdge_color(self):
         """ Muda a cor da aresta do polígono selecionado."""
         # A ser implementado 
-        pass
+        selected_polygon = self.selected_polygon
+        color = colorchooser.askcolor(title="Escolher Cor")[1]
+        if selected_polygon is not None and 0 <= selected_polygon < len(self.polygons):
+            # Deve mudar a cor da aresta do polígono selecionado
+            self.color2edge = color
+            self.redraw()
+        else:
+            messagebox.showwarning("Atenção", "Nenhum polígono selecionado ou seleção inválida.")
+
         
     def fillpoly(self):
         """ Preenche o polígono selecionado."""
-        # A ser implementado
-        # Variável da cor selecionada:
-        self.colorsList[self.selected_polygon] = self.color2paint        
         # Verifica se há um polígono selecionado
-        if self.selected_polygon is not None and 0 <= self.selected_polygon < len(self.polygons):
-            # Pega o polígono selecionado
-            polygon = self.polygons[self.selected_polygon]
-            # Desenhar dentro dos limites do polígono
-            # Pega os limites do polígono
-            x_min = min([point[0] for point in polygon]) 
-            x_max = max([point[0] for point in polygon])
-            y_min = min([point[1] for point in polygon])
-            y_max = max([point[1] for point in polygon])
-            # Preenche o polígono
-            for x in range(x_min, x_max):
-                for y in range(y_min, y_max):
-                    if Polygon(polygon).contains(Point(x, y)): # Se o ponto está dentro do polígono
-                        self.canvas.create_oval(x, y, x+1, y+1, outline=self.color2paint)
-        else:
+        if self.selected_polygon is None or not (0 <= self.selected_polygon < len(self.polygons)):
             messagebox.showwarning("Atenção", "Nenhum polígono selecionado ou seleção inválida.")
-                    
+            return
+
+        # Define a cor de preenchimento para o polígono selecionado
+        color = self.color2paint
+        polygon = self.polygons[self.selected_polygon]
+
+        # Encontra ymin e ymax do polígono
+        ymin = min(y for x, y in polygon)
+        ymax = max(y for x, y in polygon)
+
+        # Cria uma lista para armazenar as interseções para cada scanline
+        scanlines = [[] for _ in range(ymin, ymax + 1)]
+
+        # Calcula as interseções para cada aresta do polígono
+        for i in range(len(polygon)):
+            x1, y1 = polygon[i]
+            x2, y2 = polygon[(i + 1) % len(polygon)]
+
+            # Ignora arestas horizontais
+            if y1 == y2:
+                continue
+
+            # Garante que (x1, y1) está abaixo de (x2, y2)
+            if y1 > y2:
+                x1, y1, x2, y2 = x2, y2, x1, y1
+
+            # Calcula Tx para incremento da coordenada x
+            Tx = (x2 - x1) / (y2 - y1)
+
+            # Preenche a lista de interseções para cada scanline
+            x = x1
+            for y in range(y1, y2):
+                scanlines[y - ymin].append(x)
+                x += Tx
+
+        # Preenche as scanlines
+        for y, intersections in enumerate(scanlines):
+            # Ordena as interseções em ordem crescente
+            intersections.sort()
+
+            # Preenche cada par de interseções
+            for i in range(0, len(intersections), 2):
+                xini = math.ceil(intersections[i])
+                xfim = math.floor(intersections[i + 1])
+                
+                # Desenha pixels na scanline com a cor de preenchimento
+                for x in range(xini, xfim + 1):
+                    self.canvas.create_line(x, y + ymin, x + 1, y + ymin, fill=color)
+
 if __name__ == "__main__":
     app = PolygonDrawer()
     app.mainloop()
