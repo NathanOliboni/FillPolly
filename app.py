@@ -61,6 +61,7 @@ class PolygonDrawer(ctk.CTk):
         self.color2paint = ""
         self.color2edge = "yellow"
         self.colorsList = [] # Lista para armazenar as cores para redesenhar caso algum seja excluido
+        self.edgeColorsList = [] # Lista para armazenar as cores das arestas  
         
         # Adiciona um círculo para exibir a cor selecionada
         self.color_display = self.canvas.create_oval(620, 20, 650, 50, fill=self.current_color, outline="yellow", width=1)
@@ -69,6 +70,10 @@ class PolygonDrawer(ctk.CTk):
         self.canvas.bind("<Button-1>", self.add_point)
         self.canvas.bind("<Double-Button-1>", self.finish_polygon)  # Fechar polígono com duplo clique
         self.canvas.bind("<Button-3>", self.select_polygon)
+        
+        # Evento para usuário selecionar o polígono com base em um clique dentro do polígono
+        self.canvas.bind("<Button-2>", self.select_polygon)
+        
         
     def choose_color(self):
         """ Abre um seletor de cor e atualiza a cor atual e a exibição da cor."""
@@ -110,6 +115,7 @@ class PolygonDrawer(ctk.CTk):
             # Adiciona o polígono à lista
             self.polygons.append(self.current_polygon)
             self.colorsList.append('')
+            self.edgeColorsList.append(self.color2edge)
             self.current_polygon = []  # Reseta para o próximo desenho
             
             # Atualiza a lista de polígonos no frame lateral
@@ -119,6 +125,7 @@ class PolygonDrawer(ctk.CTk):
         # Printar as coordenadas dos polígonos desenhados
         print(self.polygons)
         print(self.colorsList)
+        print(self.edgeColorsList)
     
     def select_polygon(self, event):
         """Seleciona o polígono sobre o qual o usuário clicou."""
@@ -139,6 +146,7 @@ class PolygonDrawer(ctk.CTk):
             # Exclui o polígono selecionado
             del self.polygons[self.selected_polygon]
             del self.colorsList[self.selected_polygon]
+            del self.edgeColorsList[self.selected_polygon]
             
             # Resetar a seleção
             self.selected_polygon = None
@@ -187,30 +195,24 @@ class PolygonDrawer(ctk.CTk):
         
     def redraw(self):
         """ Redesenha todos os polígonos restantes no canvas."""
-        for polygon in self.polygons_aux:
+        # Redesenha cada polígono com a cor da aresta correspondente
+        for index, polygon in enumerate(self.polygons_aux):
+            edge_color = self.edgeColorsList[index]  # Cor da aresta para o polígono atual
             for i in range(len(polygon)):
-                self.canvas.create_oval(polygon[i][0]-3, polygon[i][1]-3, polygon[i][0]+3, polygon[i][1]+3, fill="black")
-                self.canvas.create_line(polygon[i], polygon[(i+1) % len(polygon)], fill=self.color2edge, width=1)
-                # Repintar a cor do polígono
+                # Desenha os pontos dos vértices
+                self.canvas.create_oval(polygon[i][0] - 3, polygon[i][1] - 3, polygon[i][0] + 3, polygon[i][1] + 3, fill="black")
+                # Desenha as arestas com a cor correspondente
+                self.canvas.create_line(polygon[i], polygon[(i + 1) % len(polygon)], fill=edge_color, width=1)
+
+        # Copia os polígonos da lista auxiliar
         self.polygons = self.polygons_aux.copy()
+
+        # Redesenha o preenchimento dos polígonos com a cor correta
         for i in range(len(self.polygons)):
             if self.colorsList[i] != '':
                 self.selected_polygon = i
                 self.color2paint = self.colorsList[i]
                 self.fillpoly()
-        
-    def changeEdge_color(self):
-        """ Muda a cor da aresta do polígono selecionado."""
-        # A ser implementado 
-        selected_polygon = self.selected_polygon
-        color = colorchooser.askcolor(title="Escolher Cor")[1]
-        if selected_polygon is not None and 0 <= selected_polygon < len(self.polygons):
-            # Deve mudar a cor da aresta do polígono selecionado
-            self.color2edge = color
-            self.redraw()
-        else:
-            messagebox.showwarning("Atenção", "Nenhum polígono selecionado ou seleção inválida.")
-
         
     def fillpoly(self):
         """ Preenche o polígono selecionado."""
@@ -221,6 +223,7 @@ class PolygonDrawer(ctk.CTk):
 
         # Define a cor de preenchimento para o polígono selecionado
         color = self.color2paint
+        self.colorsList[self.selected_polygon] = color
         polygon = self.polygons[self.selected_polygon]
 
         # Encontra ymin e ymax do polígono
@@ -266,8 +269,7 @@ class PolygonDrawer(ctk.CTk):
                 for x in range(xini, xfim + 1):
                     self.canvas.create_line(x, y + ymin, x + 1, y + ymin, fill=color)
 
+        
 if __name__ == "__main__":
     app = PolygonDrawer()
     app.mainloop()
-
-    # Ajustar a lista de cores para redesenhar os polígonos
