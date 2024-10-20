@@ -236,7 +236,8 @@ class PolygonDrawer(ctk.CTk):
         # Calcula as interseções para cada aresta do polígono
         for i in range(len(polygon)):
             x1, y1 = polygon[i]
-            x2, y2 = polygon[(i + 1) % len(polygon)]
+            x2, y2 = polygon[(i + 1) % len(polygon)] # Conecta o último ponto ao primeiro
+            print(x1, y1, x2, y2)
 
             # Ignora arestas horizontais
             if y1 == y2:
@@ -247,28 +248,37 @@ class PolygonDrawer(ctk.CTk):
                 x1, y1, x2, y2 = x2, y2, x1, y1
 
             # Calcula Tx para incremento da coordenada x
-            Tx = (x2 - x1) / (y2 - y1)
+            dx = x2 - x1 
+            dy = y2 - y1 
+            Tx = dx / dy  # Incremento horizontal por unidade vertical
 
             # Preenche a lista de interseções para cada scanline
-            x = x1
-            for y in range(y1, y2):
-                scanlines[y - ymin].append(x)
-                x += Tx
-
+            x = x1 # Inicia em x1 e incrementa Tx para cada scanline
+            for y in range(y1, y2): # Itera sobre cada scanline
+                scanlines[y - ymin].append(x) # Adiciona a interseção na scanline
+                x += Tx # Incrementa x para a próxima scanline
+                
+        print(ymin, ymax)
+        print(dx, dy, Tx)
+        print("Numero de scanlines:", len(scanlines))
+        
         # Preenche as scanlines
-        for y, intersections in enumerate(scanlines):
+        for y, intersections in enumerate(scanlines): # Itera sobre cada scanline
             # Ordena as interseções em ordem crescente
             intersections.sort()
 
             # Preenche cada par de interseções
-            for i in range(0, len(intersections), 2):
-                xini = math.ceil(intersections[i])
-                xfim = math.floor(intersections[i + 1])
+            for i in range(0, len(intersections), 2): 
+                xini = math.ceil(intersections[i]) # Arredonda para cima
+                xfim = math.floor(intersections[i + 1]) # Arredonda para baixo
                 
                 # Desenha pixels na scanline com a cor de preenchimento
                 for x in range(xini, xfim + 1):
                     self.canvas.create_line(x, y + ymin, x + 1, y + ymin, fill=color)
+                    print(x, y + ymin)
 
+        
+        
         
 if __name__ == "__main__":
     app = PolygonDrawer()
