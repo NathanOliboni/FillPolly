@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import messagebox, colorchooser
 from shapely.geometry import Polygon, Point
 import math
-
 class PolygonDrawer(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -74,7 +73,6 @@ class PolygonDrawer(ctk.CTk):
         # Evento para usuário selecionar o polígono com base em um clique dentro do polígono
         self.canvas.bind("<Button-2>", self.select_polygon)
         
-        
     def choose_color(self):
         """ Abre um seletor de cor e atualiza a cor atual e a exibição da cor."""
         color_code = colorchooser.askcolor(title="Escolher Cor")[1]  # Retorna uma tupla (RGB, Hex), pegamos o Hex
@@ -99,7 +97,7 @@ class PolygonDrawer(ctk.CTk):
         """ Adiciona um ponto ao polígono atual."""
         x, y = event.x, event.y
         self.current_polygon.append((x, y))
-        self.canvas.create_oval(x-3, y-3, x+3, y+3, fill="black")
+        self.canvas.create_oval(x, y, x, y, fill="black")
         
         # Desenha linhas entre pontos
         if len(self.current_polygon) > 1:
@@ -122,10 +120,7 @@ class PolygonDrawer(ctk.CTk):
             self.list_polygons()
         else:
             messagebox.showerror("Erro", "Um polígono precisa ter pelo menos 3 pontos.")
-        # Printar as coordenadas dos polígonos desenhados
-        print(self.polygons)
-        print(self.colorsList)
-        print(self.edgeColorsList)
+
     
     def select_polygon(self, event):
         """Seleciona o polígono sobre o qual o usuário clicou."""
@@ -165,7 +160,8 @@ class PolygonDrawer(ctk.CTk):
     
     def list_polygons(self):
         """ Atualiza a lista de polígonos desenhados no frame lateral."""
-        # Limpa a lista atual de botões
+        self.polygon_buttons = []
+    
         for widget in self.polygon_list_box.winfo_children():
             widget.destroy()
         
@@ -178,15 +174,21 @@ class PolygonDrawer(ctk.CTk):
             polygon_button = ctk.CTkButton(self.polygon_list_box, text=f"Polígono {idx+1}", 
             command=lambda i=idx: self.select_polygon_from_list(i))
             polygon_button.pack(pady=5)
-
+            self.polygon_buttons.append(polygon_button)
+            
     def select_polygon_from_list(self, index):
         """ Seleciona um polígono a partir da lista exibida."""
         self.selected_polygon = index
+        for idx, button in enumerate(self.polygon_buttons):
+            if idx == index:
+                button.configure(fg_color="blue")
+            else:
+                button.configure(fg_color="#167baf")
     
     def clear_canvas(self):
         """ Limpa o canvas e reinicia a lista de pontos temporários e a lista de polígonos."""
         self.canvas.delete("all")  # Limpa o canvas
-        self.current_polygon = []
+        self.current_polygon = [] # Reseta a lista de pontos temporários
         self.polygons = []  # Limpa a lista de polígonos desenhados
         self.selected_polygon = None  # Reseta a seleção
 
@@ -200,7 +202,7 @@ class PolygonDrawer(ctk.CTk):
             edge_color = self.edgeColorsList[index]  # Cor da aresta para o polígono atual
             for i in range(len(polygon)):
                 # Desenha os pontos dos vértices
-                self.canvas.create_oval(polygon[i][0] - 3, polygon[i][1] - 3, polygon[i][0] + 3, polygon[i][1] + 3, fill="black")
+                self.canvas.create_oval(polygon[i][0], polygon[i][1], polygon[i][0], polygon[i][1], fill="black")
                 # Desenha as arestas com a cor correspondente
                 self.canvas.create_line(polygon[i], polygon[(i + 1) % len(polygon)], fill=edge_color, width=1)
 
@@ -237,8 +239,7 @@ class PolygonDrawer(ctk.CTk):
         for i in range(len(polygon)):
             x1, y1 = polygon[i]
             x2, y2 = polygon[(i + 1) % len(polygon)] # Conecta o último ponto ao primeiro
-            print(x1, y1, x2, y2)
-
+            
             # Ignora arestas horizontais
             if y1 == y2:
                 continue
@@ -250,17 +251,16 @@ class PolygonDrawer(ctk.CTk):
             # Calcula Tx para incremento da coordenada x
             dx = x2 - x1 
             dy = y2 - y1 
-            Tx = dx / dy  # Incremento horizontal por unidade vertical
+            if dy == 0:
+                Tx = 0
+            else:
+                Tx = dx / dy  # Incremento de x para cada scanline
 
             # Preenche a lista de interseções para cada scanline
             x = x1 # Inicia em x1 e incrementa Tx para cada scanline
             for y in range(y1, y2): # Itera sobre cada scanline
-                scanlines[y - ymin].append(x) # Adiciona a interseção na scanline
                 x += Tx # Incrementa x para a próxima scanline
-                
-        print(ymin, ymax)
-        print(dx, dy, Tx)
-        print("Numero de scanlines:", len(scanlines))
+                scanlines[y - ymin].append(x) # Adiciona a interseção na scanline
         
         # Preenche as scanlines
         for y, intersections in enumerate(scanlines): # Itera sobre cada scanline
@@ -271,15 +271,10 @@ class PolygonDrawer(ctk.CTk):
             for i in range(0, len(intersections), 2): 
                 xini = math.ceil(intersections[i]) # Arredonda para cima
                 xfim = math.floor(intersections[i + 1]) # Arredonda para baixo
-                
                 # Desenha pixels na scanline com a cor de preenchimento
                 for x in range(xini, xfim + 1):
                     self.canvas.create_line(x, y + ymin, x + 1, y + ymin, fill=color)
-                    print(x, y + ymin)
 
-        
-        
-        
 if __name__ == "__main__":
     app = PolygonDrawer()
     app.mainloop()
